@@ -1,4 +1,4 @@
-package com.cmcc.syw.file;
+package com.cmcc.syw.scanner;
 
 /**
  * Created by sunyiwei on 16-1-27.
