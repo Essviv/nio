@@ -1,4 +1,4 @@
-package com.cmcc.syw.io.stream;
+package com.cmcc.syw.io;
 
 import com.cmcc.syw.utils.Student;
 
@@ -11,7 +11,7 @@ import java.util.Scanner;
  * <p>
  * Created by sunyiwei on 16/4/27.
  */
-public class StreamExample {
+public class BasicOperation {
     public static void main(String[] args) throws IOException, ClassNotFoundException {
         //stream operation
         streamOp();
