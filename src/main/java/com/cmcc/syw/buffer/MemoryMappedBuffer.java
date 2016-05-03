@@ -1,4 +1,4 @@
-package com.cmcc.syw.bytebuffer;
+package com.cmcc.syw.buffer;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;
