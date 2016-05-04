@@ -2,9 +2,12 @@ package com.cmcc.syw.selector;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
+import java.nio.channels.SocketChannel;
+import java.nio.charset.Charset;
 import java.util.Iterator;
 import java.util.Set;
 
@@ -20,33 +23,42 @@ public class Server {
         serverSocketChannel.socket().bind(new InetSocketAddress(HOST, PORT));
         serverSocketChannel.configureBlocking(false);
 
+        //register
         Selector selector = Selector.open();
         int insteresSet = SelectionKey.OP_ACCEPT;
-
         serverSocketChannel.register(selector, insteresSet);
 
-        while(true){
-            int keys = selector.select();
-            if(keys <= 0){
-                continue;
-            }
+        while (true) {
+            if (selector.select() > 0) {
+                Set<SelectionKey> selectionKeyset = selector.selectedKeys();
+                Iterator<SelectionKey> iter = selectionKeyset.iterator();
 
-            Set<SelectionKey> selectionKeyset = selector.selectedKeys();
-            Iterator<SelectionKey> iter = selectionKeyset.iterator();
-            while(iter.hasNext()){
-                SelectionKey selectionKey = iter.next();
+                while (iter.hasNext()) {
+                    SelectionKey selectionKey = iter.next();
 
-                if(selectionKey.isAcceptable()){
-                    System.out.println("Accep op is ready.");
-                }else if(selectionKey.isReadable()){
-                    System.out.println("Read op is ready.");
-                }else if(selectionKey.isWritable()){
-                    System.out.println("Write op is ready.");
-                }else{
-                    System.out.println("Unknown op.");
+                    if (selectionKey.isAcceptable()) {
+                        ServerSocketChannel ssc = (ServerSocketChannel) selectionKey.channel();
+                        SocketChannel sc = ssc.accept();
+                        sc.configureBlocking(false);
+
+                        sc.register(selector, SelectionKey.OP_READ);
+                    } else if (selectionKey.isReadable()) {
+                        SocketChannel sc = (SocketChannel) selectionKey.channel();
+                        ByteBuffer byteBuffer = ByteBuffer.allocate(64);
+
+                        sc.read(byteBuffer);
+                        byteBuffer.flip();
+
+                        String content = Charset.forName("utf-8").newDecoder().decode(byteBuffer).toString();
+                        String response = "你好, 客户端. 我已经收到你的消息, 内容为\"" + content + "\"";
+
+                        sc.write(ByteBuffer.wrap(response.getBytes()));
+                    } else {
+                        System.out.println("Unknown op.");
+                    }
+
+                    iter.remove();
                 }
-
-                iter.remove();
             }
         }
     }
