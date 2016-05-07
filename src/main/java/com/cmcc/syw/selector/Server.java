@@ -53,6 +53,7 @@ public class Server {
                         String response = "你好, 客户端. 我已经收到你的消息, 内容为\"" + content + "\"";
 
                         sc.write(ByteBuffer.wrap(response.getBytes()));
+                        sc.close();
                     } else {
                         System.out.println("Unknown op.");
                     }
