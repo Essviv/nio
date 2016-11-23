@@ -5,7 +5,7 @@ import java.nio.file.*;
 import java.util.List;
 
 /**
- * code to learn watch service in java
+ * code to practise watch service in java
  * <p>
  * Created by sunyiwei on 16/5/1.
  */
