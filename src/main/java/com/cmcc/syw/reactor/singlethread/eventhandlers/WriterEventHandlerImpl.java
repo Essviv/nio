@@ -13,8 +13,12 @@ import java.nio.channels.SocketChannel;
  * Created by sunyiwei on 2016/11/23.
  */
 public class WriterEventHandlerImpl extends AbstractEventHandlerImpl {
-    public WriterEventHandlerImpl(Dispatcher dispatcher) {
+    private String name;
+
+    public WriterEventHandlerImpl(String name, Dispatcher dispatcher) {
         super(dispatcher);
+
+        this.name = name;
     }
 
     /**
@@ -31,17 +35,26 @@ public class WriterEventHandlerImpl extends AbstractEventHandlerImpl {
     @Override
     public void run() {
         SelectionKey selectionKey = get();
+        if (!selectionKey.isValid()) {
+            return;
+        }
+
         if (selectionKey.isWritable()) {
             SocketChannel sc = (SocketChannel) selectionKey.channel();
 
-            final String content = "Bye, byte";
             try {
+                final String content = "Bye, " + name;
                 sc.write(ByteBuffer.wrap(content.getBytes()));
 
-                sc.close();
+                selectionKey.cancel();
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
+    }
+
+    @Override
+    public String getName() {
+        return WriterEventHandlerImpl.class.getSimpleName();
     }
 }

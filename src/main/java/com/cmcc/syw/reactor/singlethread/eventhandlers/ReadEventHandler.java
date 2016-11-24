@@ -15,6 +15,8 @@ import java.nio.charset.StandardCharsets;
  */
 public class ReadEventHandler extends AbstractEventHandlerImpl {
 
+    private static int count = 0;
+
     public ReadEventHandler(Dispatcher dispatcher) {
         super(dispatcher);
     }
@@ -33,22 +35,31 @@ public class ReadEventHandler extends AbstractEventHandlerImpl {
     @Override
     public void run() {
         SelectionKey selectionKey = get();
-        if (!selectionKey.isValid()) {
-            return;
-        }
 
         if (selectionKey.isReadable()) {
             SocketChannel sc = (SocketChannel) selectionKey.channel();
 
-            ByteBuffer byteBuffer = ByteBuffer.allocate(1024);
+            if (!selectionKey.isValid()) {
+                return;
+            }
+
+            ByteBuffer byteBuffer = ByteBuffer.allocate(16);
             try {
                 sc.read(byteBuffer);
-                System.out.println(String.valueOf(StandardCharsets.UTF_8.decode(byteBuffer)));
+                byteBuffer.flip();
 
-                dispatcher.register(sc, SelectionKey.OP_WRITE, new WriterEventHandlerImpl(dispatcher));
+                String clientName = String.valueOf(StandardCharsets.UTF_8.decode(byteBuffer));
+                System.out.println("Client name: " + clientName);
+
+                dispatcher.register(sc, SelectionKey.OP_WRITE, new WriterEventHandlerImpl(clientName, dispatcher));
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
+    }
+
+    @Override
+    public String getName() {
+        return ReadEventHandler.class.getSimpleName();
     }
 }

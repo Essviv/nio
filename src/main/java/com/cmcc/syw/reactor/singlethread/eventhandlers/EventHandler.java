@@ -11,4 +11,6 @@ public interface EventHandler extends Runnable {
     SelectionKey get();
 
     void set(SelectionKey selectionKey);
+
+    String getName();
 }

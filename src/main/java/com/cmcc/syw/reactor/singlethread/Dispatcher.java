@@ -57,7 +57,7 @@ public class Dispatcher implements Runnable {
                     Iterator<SelectionKey> iterator = selectionKeySet.iterator();
                     while (iterator.hasNext()) {
                         SelectionKey selectionKey = iterator.next();
-                        if(!selectionKey.isValid()){
+                        if (!selectionKey.isValid()) {
                             continue;
                         }
 
@@ -65,12 +65,12 @@ public class Dispatcher implements Runnable {
                         eventHandler.set(selectionKey);
 
                         //具体的事件交由相应的处理器进行处理
-                        new Thread(eventHandler).start();
+                        eventHandler.run();
 
                         iterator.remove();
                     }
                 }
-            } catch (IOException e) {
+            } catch (Exception e) {
                 e.printStackTrace();
             }
         }

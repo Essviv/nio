@@ -2,7 +2,6 @@ package com.cmcc.syw.reactor.singlethread.eventhandlers;
 
 import com.cmcc.syw.reactor.singlethread.Dispatcher;
 
-import java.io.IOException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
@@ -35,12 +34,19 @@ public class AcceptEventHandler extends AbstractEventHandlerImpl {
             ServerSocketChannel ssc = (ServerSocketChannel) selectionKey.channel();
             try {
                 SocketChannel sc = ssc.accept();
-                sc.configureBlocking(false);
 
-                dispatcher.register(sc, SelectionKey.OP_READ, new ReadEventHandler(dispatcher));
-            } catch (IOException e) {
+                if (sc != null) {
+                    sc.configureBlocking(false);
+                    dispatcher.register(sc, SelectionKey.OP_READ, new ReadEventHandler(dispatcher));
+                }
+            } catch (Exception e) {
                 e.printStackTrace();
             }
         }
+    }
+
+    @Override
+    public String getName() {
+        return AcceptEventHandler.class.getSimpleName();
     }
 }

@@ -8,7 +8,11 @@ import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
+import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Reactor模式的客户端代码
@@ -16,17 +20,60 @@ import java.util.Set;
  * Created by sunyiwei on 2016/11/23.
  */
 public class Client {
-    public static void main(String[] args) throws IOException {
+    private volatile boolean isRunning = true;
+
+    private String name;
+
+    public Client(String name) {
+        this.name = name;
+    }
+
+    public static void main(String[] args) throws IOException, InterruptedException {
+        final int COUNT = 1000;
+        ExecutorService executorService = Executors.newFixedThreadPool(COUNT);
+        CountDownLatch cdl = new CountDownLatch(COUNT);
+
+        for (int i = 0; i < COUNT; i++) {
+            executorService.submit(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        new Client(randStr(16)).go();
+                        cdl.countDown();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            });
+        }
+
+        cdl.await();
+        executorService.shutdownNow();
+    }
+
+    private static String randStr(int length) {
+        StringBuilder sb = new StringBuilder();
+
+        Random r = new Random();
+        for (int i = 0; i < length; i++) {
+            sb.append((char) ('a' + r.nextInt(26)));
+        }
+
+        return sb.toString();
+    }
+
+    public void go() throws IOException {
         final String HOST = "localhost";
         final int PORT = 8888;
 
         SocketChannel socketChannel = SocketChannel.open();
-        socketChannel.connect(new InetSocketAddress(HOST, PORT));
         socketChannel.configureBlocking(false);
 
         Selector selector = Selector.open();
         socketChannel.register(selector, SelectionKey.OP_CONNECT);
-        while (true) {
+
+        socketChannel.connect(new InetSocketAddress(HOST, PORT));
+        while (isRunning) {
             if (selector.select(1000) == 0) {
                 continue;
             }
@@ -40,6 +87,8 @@ public class Client {
                     processConnect(selectionKey);
                 } else if (selectionKey.isReadable()) {
                     processRead(selectionKey);
+                } else if (selectionKey.isWritable()) {
+                    processWrite(selectionKey);
                 }
 
                 iterator.remove();
@@ -47,25 +96,36 @@ public class Client {
         }
     }
 
-    private static void processRead(SelectionKey selectionKey) throws IOException {
+    private void processWrite(SelectionKey selectionKey) throws IOException {
         SocketChannel socketChannel = (SocketChannel) selectionKey.channel();
-        ByteBuffer byteBuffer = ByteBuffer.allocate(1024);
+        socketChannel.write(ByteBuffer.wrap(name.getBytes()));
+
+        socketChannel.register(selectionKey.selector(), SelectionKey.OP_READ);
+    }
+
+    private void processRead(SelectionKey selectionKey) throws IOException {
+        if (!selectionKey.isValid()) {
+            return;
+        }
+        SocketChannel socketChannel = (SocketChannel) selectionKey.channel();
+        ByteBuffer byteBuffer = ByteBuffer.allocate(16);
         socketChannel.read(byteBuffer);
+        byteBuffer.flip();
 
         System.out.println("Server responses: " + StandardCharsets.UTF_8.decode(byteBuffer));
         selectionKey.cancel();
+
+        isRunning = false;
     }
 
-    private static void processConnect(SelectionKey selectionKey) throws IOException {
+    private void processConnect(SelectionKey selectionKey) throws IOException {
         SocketChannel socketChannel = (SocketChannel) selectionKey.channel();
         if (socketChannel.isConnectionPending()) {
             socketChannel.finishConnect();
 
-            final String content = "Hello, server";
-            socketChannel.write(ByteBuffer.wrap(content.getBytes()));
 
-            //注册读事件
-            socketChannel.register(selectionKey.selector(), SelectionKey.OP_READ);
+            //注册写事件
+            socketChannel.register(selectionKey.selector(), SelectionKey.OP_WRITE);
         }
     }
 }
