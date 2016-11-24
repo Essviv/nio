@@ -37,7 +37,13 @@ public class EventHandlerImpl implements EventHandler {
                 processRead(selectionKey);
             }
         } else if (status == Status.WRITE) {
-            processWrite(selectionKey);
+            status = Status.PROCESSING;
+
+            if (runWithThreadPool) {
+                executorService.submit(() -> processWrite(selectionKey));
+            } else {
+                processWrite(selectionKey);
+            }
         }
     }
 
