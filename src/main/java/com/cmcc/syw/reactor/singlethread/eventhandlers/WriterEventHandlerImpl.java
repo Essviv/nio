@@ -39,17 +39,15 @@ public class WriterEventHandlerImpl extends AbstractEventHandlerImpl {
             return;
         }
 
-        if (selectionKey.isWritable()) {
-            SocketChannel sc = (SocketChannel) selectionKey.channel();
+        SocketChannel sc = (SocketChannel) selectionKey.channel();
 
-            try {
-                final String content = "Bye, " + name;
-                sc.write(ByteBuffer.wrap(content.getBytes()));
+        try {
+            final String content = "Bye, " + name;
+            sc.write(ByteBuffer.wrap(content.getBytes()));
 
-                selectionKey.cancel();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            selectionKey.cancel();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 

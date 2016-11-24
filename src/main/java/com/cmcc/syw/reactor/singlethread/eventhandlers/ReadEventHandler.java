@@ -36,25 +36,23 @@ public class ReadEventHandler extends AbstractEventHandlerImpl {
     public void run() {
         SelectionKey selectionKey = get();
 
-        if (selectionKey.isReadable()) {
-            SocketChannel sc = (SocketChannel) selectionKey.channel();
+        SocketChannel sc = (SocketChannel) selectionKey.channel();
 
-            if (!selectionKey.isValid()) {
-                return;
-            }
+        if (!selectionKey.isValid()) {
+            return;
+        }
 
-            ByteBuffer byteBuffer = ByteBuffer.allocate(16);
-            try {
-                sc.read(byteBuffer);
-                byteBuffer.flip();
+        ByteBuffer byteBuffer = ByteBuffer.allocate(16);
+        try {
+            sc.read(byteBuffer);
+            byteBuffer.flip();
 
-                String clientName = String.valueOf(StandardCharsets.UTF_8.decode(byteBuffer));
-                System.out.println("Client name: " + clientName);
+            String clientName = String.valueOf(StandardCharsets.UTF_8.decode(byteBuffer));
+            System.out.println("Client name: " + clientName);
 
-                dispatcher.register(sc, SelectionKey.OP_WRITE, new WriterEventHandlerImpl(clientName, dispatcher));
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            dispatcher.register(sc, SelectionKey.OP_WRITE, new WriterEventHandlerImpl(clientName, dispatcher));
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
