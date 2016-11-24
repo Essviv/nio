@@ -29,7 +29,7 @@ public class Client {
     }
 
     public static void main(String[] args) throws IOException, InterruptedException {
-        final int COUNT = 1;
+        final int COUNT = 500;
         ExecutorService executorService = Executors.newFixedThreadPool(COUNT);
         CountDownLatch cdl = new CountDownLatch(COUNT);
 
