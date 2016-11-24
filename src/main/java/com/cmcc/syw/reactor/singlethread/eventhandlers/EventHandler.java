@@ -7,10 +7,6 @@ import java.nio.channels.SelectionKey;
  * <p>
  * Created by sunyiwei on 2016/11/23.
  */
-public interface EventHandler extends Runnable {
-    SelectionKey get();
-
-    void set(SelectionKey selectionKey);
-
-    String getName();
+public interface EventHandler {
+    void process(SelectionKey selectionKey);
 }

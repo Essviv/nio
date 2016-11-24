@@ -21,6 +21,7 @@ public class Dispatcher implements Runnable {
 
     private boolean isRunning;
 
+
     public Dispatcher() {
         try {
             selector = Selector.open();
@@ -32,6 +33,14 @@ public class Dispatcher implements Runnable {
 
     public void stop() {
         isRunning = false;
+    }
+
+    public void register(SelectableChannel channel, int ops, EventHandler eventHandler) {
+        try {
+            channel.register(selector, ops, eventHandler);
+        } catch (ClosedChannelException e) {
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -51,7 +60,7 @@ public class Dispatcher implements Runnable {
         while (isRunning) {
             try {
                 //阻塞, 监听事件的到达
-                if (selector.select(1000) > 0) {
+                if (selector.select() > 0) {
                     //事件分发
                     Set<SelectionKey> selectionKeySet = selector.selectedKeys();
                     Iterator<SelectionKey> iterator = selectionKeySet.iterator();
@@ -62,10 +71,9 @@ public class Dispatcher implements Runnable {
                         }
 
                         EventHandler eventHandler = (EventHandler) selectionKey.attachment();
-                        eventHandler.set(selectionKey);
 
                         //具体的事件交由相应的处理器进行处理
-                        eventHandler.run();
+                        eventHandler.process(selectionKey);
 
                         iterator.remove();
                     }
@@ -76,11 +84,5 @@ public class Dispatcher implements Runnable {
         }
     }
 
-    public void register(SelectableChannel channel, int ops, EventHandler eventHandler) {
-        try {
-            channel.register(selector, ops, eventHandler);
-        } catch (ClosedChannelException e) {
-            e.printStackTrace();
-        }
-    }
+
 }

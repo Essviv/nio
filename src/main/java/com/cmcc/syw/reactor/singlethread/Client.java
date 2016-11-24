@@ -29,20 +29,17 @@ public class Client {
     }
 
     public static void main(String[] args) throws IOException, InterruptedException {
-        final int COUNT = 1000;
+        final int COUNT = 1;
         ExecutorService executorService = Executors.newFixedThreadPool(COUNT);
         CountDownLatch cdl = new CountDownLatch(COUNT);
 
         for (int i = 0; i < COUNT; i++) {
-            executorService.submit(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        new Client(randStr(16)).go();
-                        cdl.countDown();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
+            executorService.submit(() -> {
+                try {
+                    new Client(randStr(16)).go();
+                    cdl.countDown();
+                } catch (IOException e) {
+                    e.printStackTrace();
                 }
             });
         }
@@ -74,7 +71,7 @@ public class Client {
 
         socketChannel.connect(new InetSocketAddress(HOST, PORT));
         while (isRunning) {
-            if (selector.select(1000) == 0) {
+            if (selector.select() == 0) {
                 continue;
             }
 
@@ -96,20 +93,30 @@ public class Client {
         }
     }
 
-    private void processWrite(SelectionKey selectionKey) throws IOException {
+    private void processWrite(SelectionKey selectionKey) {
         SocketChannel socketChannel = (SocketChannel) selectionKey.channel();
-        socketChannel.write(ByteBuffer.wrap(name.getBytes()));
 
-        socketChannel.register(selectionKey.selector(), SelectionKey.OP_READ);
+        try {
+            socketChannel.write(ByteBuffer.wrap(name.getBytes()));
+            socketChannel.register(selectionKey.selector(), SelectionKey.OP_READ);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
-    private void processRead(SelectionKey selectionKey) throws IOException {
+    private void processRead(SelectionKey selectionKey) {
         if (!selectionKey.isValid()) {
             return;
         }
         SocketChannel socketChannel = (SocketChannel) selectionKey.channel();
         ByteBuffer byteBuffer = ByteBuffer.allocate(16);
-        socketChannel.read(byteBuffer);
+
+        try {
+            socketChannel.read(byteBuffer);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
         byteBuffer.flip();
 
         System.out.println("Server responses: " + StandardCharsets.UTF_8.decode(byteBuffer));
@@ -118,14 +125,18 @@ public class Client {
         isRunning = false;
     }
 
-    private void processConnect(SelectionKey selectionKey) throws IOException {
+    private void processConnect(SelectionKey selectionKey) {
         SocketChannel socketChannel = (SocketChannel) selectionKey.channel();
         if (socketChannel.isConnectionPending()) {
-            socketChannel.finishConnect();
 
+            try {
+                socketChannel.finishConnect();
 
-            //注册写事件
-            socketChannel.register(selectionKey.selector(), SelectionKey.OP_WRITE);
+                //注册写事件
+                socketChannel.register(selectionKey.selector(), SelectionKey.OP_WRITE);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
     }
 }

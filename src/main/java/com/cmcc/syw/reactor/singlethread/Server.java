@@ -1,6 +1,6 @@
 package com.cmcc.syw.reactor.singlethread;
 
-import com.cmcc.syw.reactor.singlethread.eventhandlers.AcceptEventHandler;
+import com.cmcc.syw.reactor.singlethread.eventhandlers.AcceptEventHandlerImpl;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -24,7 +24,7 @@ public class Server {
         ssc.configureBlocking(false);
 
         //register
-        dispatcher.register(ssc, SelectionKey.OP_ACCEPT, new AcceptEventHandler(dispatcher));
+        dispatcher.register(ssc, SelectionKey.OP_ACCEPT, new AcceptEventHandlerImpl(true));
 
         //start event loop
         Thread mainThread = new Thread(dispatcher);
