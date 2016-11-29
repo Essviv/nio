@@ -19,71 +19,109 @@ public class EventHandlerImpl implements EventHandler {
 
     private String clientName = null;
     private boolean runWithThreadPool = false;
-    private Status status;
+    private State readState = new ReadState(this);
+    private State writeState = new WriteState();
+    private State currentState = readState;
 
     public EventHandlerImpl(boolean runWithThreadPool) {
         this.runWithThreadPool = runWithThreadPool;
-        this.status = Status.READ;
+        this.currentState = readState;
     }
 
     @Override
     public void process(SelectionKey selectionKey) {
-        if (status == Status.READ) {
-            status = Status.PROCESSING;
+        //正在处理中
+        if (currentState.isProcessing()) {
+            return;
+        }
 
-            if (runWithThreadPool) {
-                executorService.submit(() -> processRead(selectionKey));
-            } else {
-                processRead(selectionKey);
+        currentState.startProcessing();
+        if (runWithThreadPool) {
+            executorService.submit(() -> currentState.process(selectionKey));
+        } else {
+            currentState.process(selectionKey);
+        }
+    }
+
+    //状态模式中的状态
+    private interface State {
+        void process(SelectionKey selectionKey);
+
+        boolean isProcessing();
+
+        void startProcessing();
+    }
+
+    private class WriteState implements State {
+        private boolean isProcessing = false;
+
+        @Override
+        public void startProcessing() {
+            isProcessing = true;
+        }
+
+        @Override
+        public void process(SelectionKey selectionKey) {
+            SocketChannel sc = (SocketChannel) selectionKey.channel();
+
+            try {
+                final String content = "Bye, " + clientName;
+                sc.write(ByteBuffer.wrap(content.getBytes()));
+
+                selectionKey.cancel();
+            } catch (IOException e) {
+                e.printStackTrace();
+            } finally {
+                isProcessing = false;
             }
-        } else if (status == Status.WRITE) {
-            status = Status.PROCESSING;
+        }
 
-            if (runWithThreadPool) {
-                executorService.submit(() -> processWrite(selectionKey));
-            } else {
-                processWrite(selectionKey);
+        @Override
+        public boolean isProcessing() {
+            return isProcessing;
+        }
+    }
+
+    private class ReadState implements State {
+        private boolean isProcessing = false;
+        private EventHandlerImpl eventHandler;
+
+        public ReadState(EventHandlerImpl eventHandler) {
+            this.eventHandler = eventHandler;
+        }
+
+        @Override
+        public void startProcessing() {
+            isProcessing = true;
+        }
+
+        @Override
+        public void process(SelectionKey selectionKey) {
+            SocketChannel sc = (SocketChannel) selectionKey.channel();
+
+            ByteBuffer byteBuffer = ByteBuffer.allocate(16);
+            try {
+                sc.read(byteBuffer);
+                byteBuffer.flip();
+
+                clientName = String.valueOf(StandardCharsets.UTF_8.decode(byteBuffer));
+                System.out.println(Thread.currentThread().getName() + ": Client addr: " + sc.getRemoteAddress());
+
+                Selector selector = selectionKey.selector();
+                sc.register(selector, SelectionKey.OP_WRITE, this.eventHandler);
+                currentState = writeState; //状态变迁
+
+                selector.wakeup();
+            } catch (IOException e) {
+                e.printStackTrace();
+            } finally {
+                isProcessing = false;
             }
         }
-    }
 
-    private void processWrite(SelectionKey selectionKey) {
-        SocketChannel sc = (SocketChannel) selectionKey.channel();
-
-        try {
-            final String content = "Bye, " + clientName;
-            sc.write(ByteBuffer.wrap(content.getBytes()));
-
-            selectionKey.cancel();
-        } catch (IOException e) {
-            e.printStackTrace();
+        @Override
+        public boolean isProcessing() {
+            return isProcessing;
         }
-    }
-
-    private void processRead(SelectionKey selectionKey) {
-        SocketChannel sc = (SocketChannel) selectionKey.channel();
-
-        ByteBuffer byteBuffer = ByteBuffer.allocate(16);
-        try {
-            sc.read(byteBuffer);
-            byteBuffer.flip();
-
-            clientName = String.valueOf(StandardCharsets.UTF_8.decode(byteBuffer));
-            System.out.println(Thread.currentThread().getName() + ": Client addr: " + sc.getRemoteAddress());
-
-            Selector selector = selectionKey.selector();
-            sc.register(selector, SelectionKey.OP_WRITE, this);
-            status = Status.WRITE;
-
-            selector.wakeup();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    enum Status {
-        READ,
-        PROCESSING,
-        WRITE
     }
 }
